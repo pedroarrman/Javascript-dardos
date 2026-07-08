@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- IMPORTAR CSS -->
+<?!= HtmlService.createHtmlOutputFromFile('styles').getContent(); ?>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div id="inicio" class="card">
+
+<button onclick="modo='cricket'" class="btn primary">Cricket</button>
+<button onclick="modo='501'" class="btn secondary">501</button>
+
+<div id="jugadores"></div>
+
+<button onclick="addJugador()" class="btn secondary">➕ Añadir jugador</button>
+<button onclick="iniciar()" class="btn primary">Iniciar partida</button>
+
+</div>
+
+<div id="juego" style="display:none;">
+
+<div class="card">
+<h3 id="turno"></h3>
+<div id="score"></div>
+<p>Dardos: <span id="dardos">0</span>/3</p>
+<p id="estadoTurno"></p>
+</div>
+
+<div class="card selector">
+<button onclick="setMulti(1)" id="b1" class="btn primary">N</button>
+<button onclick="setMulti(2)" id="b2" class="btn secondary">D</button>
+<button onclick="setMulti(3)" id="b3" class="btn secondary">T</button>
+</div>
+
+<div class="card">
+<div id="botones" class="grid"></div>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+/* VARIABLES */
+let modo="cricket";
+let jugadores=[];
+let multi=1;
+
+/* MULTIPLICADOR */
+function setMulti(m){
+  multi=m;
+
+  b1.className="btn secondary";
+  b2.className="btn secondary";
+  b3.className="btn secondary";
+
+  if(m===1) b1.className="btn primary";
+  if(m===2) b2.className="btn primary";
+  if(m===3) b3.className="btn primary";
+}
+
+/* JUGADORES */
+function addJugador(){
+
+  let contenedor = document.getElementById("jugadores");
+
+  if(jugadores.length >= 4) return;
+
+  let i = jugadores.length;
+
+  jugadores.push("");
+
+  let input = document.createElement("input");
+  input.placeholder = "Jugador " + (i+1);
+
+  input.onchange = function(){
+    jugadores[i] = this.value;
+  };
+
+  contenedor.appendChild(input);
+}
+
+/* INICIAR */
+function iniciar(){
+
+  let j = jugadores.filter(x => x);
+
+  if(j.length === 0){
+    alert("Añade jugadores");
+    return;
+  }
+
+  google.script.run.withSuccessHandler(actualizar)
+    .iniciarJuego(modo,j);
+
+  inicio.style.display="none";
+  juego.style.display="block";
+
+  crearBotones();
+}
+
+/* BOTONES */
+function crearBotones(){
+
+  botones.innerHTML="";
+
+  for(let i=1;i<=20;i++){
+    botones.innerHTML += `<button class="btn dart" onclick="tirarNumero(${i})">${i}</button>`;
+  }
+
+  botones.innerHTML += `
+    <button class="btn dart" onclick="tirarBull()">25</button>
+    <button class="btn dart" onclick="tirarBullDoble()">50</button>
+  `;
+}
+
+/* TIRADAS */
+function tirarNumero(n){
+
+  let valor = n * multi;
+
+  if(multi===3 && n>20) return;
+
+  enviar(valor);
+}
+
+function tirarBull(){ enviar(25); }
+function tirarBullDoble(){ enviar(50); }
+
+/* ENVÍO */
+function enviar(v){
+
+  let f = modo==="501" ? "tirar501" : "tirarCricket";
+
+  google.script.run.withSuccessHandler(actualizar)[f](v);
+}
+
+/* UI */
+function actualizar(e){
+
+  turno.innerText="Turno: "+e.jugadores[e.turno];
+
+  let html="";
+  for(let i=0;i<e.jugadores.length;i++){
+    html+=`
+      <div class="player ${i===e.turno?'active':''}">
+        ${e.jugadores[i]} → ${e.global[i]} (R:${e.ronda[i]})
+      </div>
+    `;
+  }
+
+  score.innerHTML=html;
+  dardos.innerText=e.dardos.length;
+
+  estadoTurno.innerText = e.bust ? "BUST!" : "";
+}
+
+/* INICIO AUTOMÁTICO */
+window.onload = function(){
+  addJugador();
+};
+
+</script>
+
+</body>
+</html>
