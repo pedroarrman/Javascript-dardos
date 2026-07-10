@@ -4,7 +4,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- IMPORTAR CSS -->
-<?!= HtmlService.createHtmlOutputFromFile('styles').getContent(); ?>
+<link rel="stylesheet" href="styles.css">
+
 
 </head>
 
@@ -12,17 +13,136 @@
 
 <div class="container">
 
+<!-- ==========================================================
+     PANTALLA DE INICIO
+     Este bloque sustituye COMPLETAMENTE al actual <div id="inicio">
+     ========================================================== -->
+
 <div id="inicio" class="card">
 
-<button onclick="modo='cricket'" class="btn primary">Cricket</button>
-<button onclick="modo='501'" class="btn secondary">501</button>
+    <!-- ======================================================
+         TÍTULO
+         ====================================================== -->
 
-<div id="jugadores"></div>
+    <h2 class="card-title">
+        Configuración de la partida
+    </h2>
 
-<button onclick="addJugador()" class="btn secondary">➕ Añadir jugador</button>
-<button onclick="iniciar()" class="btn primary">Iniciar partida</button>
+    <p style="margin-bottom:25px;color:#aaa;">
+        Selecciona el modo de juego y añade entre 1 y 4 jugadores.
+    </p>
+
+
+    <!-- ======================================================
+         SELECCIÓN DE MODO
+         ====================================================== -->
+
+    <div class="modo-selector">
+
+        <button
+            id="btnCricket"
+            class="btn primary"
+            onclick="seleccionarModo('cricket')">
+
+            🏏 Cricket
+
+        </button>
+
+        <button
+            id="btn501"
+            class="btn secondary"
+            onclick="seleccionarModo('501')">
+
+            🎯 501
+
+        </button>
+
+    </div>
+
+
+    <!-- ======================================================
+         LISTA DE JUGADORES
+         ====================================================== -->
+
+    <div class="card" style="margin-top:25px;">
+
+        <h3 style="margin-bottom:15px;">
+            Jugadores
+        </h3>
+
+        <div id="jugadores">
+
+            <!--
+                Los jugadores serán añadidos dinámicamente
+                por addJugador()
+            -->
+
+        </div>
+
+        <button
+            class="btn secondary"
+            style="margin-top:15px;width:100%;"
+            onclick="addJugador()">
+
+            ➕ Añadir jugador
+
+        </button>
+
+    </div>
+
+
+    <!-- ======================================================
+         BOTÓN COMENZAR
+         ====================================================== -->
+
+    <button
+        class="btn primary"
+        style="
+            width:100%;
+            margin-top:25px;
+            font-size:20px;
+            padding:18px;
+        "
+        onclick="iniciar()">
+
+        ▶ COMENZAR PARTIDA
+
+    </button>
 
 </div>
+
+<!-- ==========================================================
+     FUNCIÓN PARA CAMBIAR EL MODO DE JUEGO
+     Sustituye por completo a:
+         onclick="modo='501'"
+         onclick="modo='cricket'"
+     ========================================================== -->
+
+<script>
+
+function seleccionarModo(nuevoModo){
+
+    modo = nuevoModo;
+
+    const cricket = document.getElementById("btnCricket");
+    const juego501 = document.getElementById("btn501");
+
+    cricket.className = "btn secondary";
+    juego501.className = "btn secondary";
+
+    if(nuevoModo==="cricket"){
+
+        cricket.className="btn primary";
+
+    }else{
+
+        juego501.className="btn primary";
+
+    }
+
+}
+
+</script>
 
 <div id="juego" style="display:none;">
 
@@ -47,128 +167,8 @@
 
 </div>
 
-<script>
-
-/* VARIABLES */
-let modo="cricket";
-let jugadores=[];
-let multi=1;
-
-/* MULTIPLICADOR */
-function setMulti(m){
-  multi=m;
-
-  b1.className="btn secondary";
-  b2.className="btn secondary";
-  b3.className="btn secondary";
-
-  if(m===1) b1.className="btn primary";
-  if(m===2) b2.className="btn primary";
-  if(m===3) b3.className="btn primary";
-}
-
-/* JUGADORES */
-function addJugador(){
-
-  let contenedor = document.getElementById("jugadores");
-
-  if(jugadores.length >= 4) return;
-
-  let i = jugadores.length;
-
-  jugadores.push("");
-
-  let input = document.createElement("input");
-  input.placeholder = "Jugador " + (i+1);
-
-  input.onchange = function(){
-    jugadores[i] = this.value;
-  };
-
-  contenedor.appendChild(input);
-}
-
-/* INICIAR */
-function iniciar(){
-
-  let j = jugadores.filter(x => x);
-
-  if(j.length === 0){
-    alert("Añade jugadores");
-    return;
-  }
-
-  google.script.run.withSuccessHandler(actualizar)
-    .iniciarJuego(modo,j);
-
-  inicio.style.display="none";
-  juego.style.display="block";
-
-  crearBotones();
-}
-
-/* BOTONES */
-function crearBotones(){
-
-  botones.innerHTML="";
-
-  for(let i=1;i<=20;i++){
-    botones.innerHTML += `<button class="btn dart" onclick="tirarNumero(${i})">${i}</button>`;
-  }
-
-  botones.innerHTML += `
-    <button class="btn dart" onclick="tirarBull()">25</button>
-    <button class="btn dart" onclick="tirarBullDoble()">50</button>
-  `;
-}
-
-/* TIRADAS */
-function tirarNumero(n){
-
-  let valor = n * multi;
-
-  if(multi===3 && n>20) return;
-
-  enviar(valor);
-}
-
-function tirarBull(){ enviar(25); }
-function tirarBullDoble(){ enviar(50); }
-
-/* ENVÍO */
-function enviar(v){
-
-  let f = modo==="501" ? "tirar501" : "tirarCricket";
-
-  google.script.run.withSuccessHandler(actualizar)[f](v);
-}
-
-/* UI */
-function actualizar(e){
-
-  turno.innerText="Turno: "+e.jugadores[e.turno];
-
-  let html="";
-  for(let i=0;i<e.jugadores.length;i++){
-    html+=`
-      <div class="player ${i===e.turno?'active':''}">
-        ${e.jugadores[i]} → ${e.global[i]} (R:${e.ronda[i]})
-      </div>
-    `;
-  }
-
-  score.innerHTML=html;
-  dardos.innerText=e.dardos.length;
-
-  estadoTurno.innerText = e.bust ? "BUST!" : "";
-}
-
-/* INICIO AUTOMÁTICO */
-window.onload = function(){
-  addJugador();
-};
-
-</script>
+<!-- IMPORTAR JS -->
+<script type="text/javascript" src="script.js"></script>
 
 </body>
 </html>
