@@ -1,174 +1,118 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<!-- IMPORTAR CSS -->
-<link rel="stylesheet" href="styles.css">
-
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Dardos</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: system-ui, -apple-system; background: linear-gradient(135deg, #1a1a2e, #16213e); color:white; min-height:100vh; padding: 20px; }
+        .container { max-width:600px; margin:auto; }
+        .card { background: rgba(255,255,255,0.05); border-radius:14px; padding:16px; margin-bottom:12px; }
+        .btn { width:100%; padding:14px; border:none; border-radius:10px; font-weight:600; cursor:pointer; margin-bottom: 5px; transition: 0.2s; }
+        .primary { background: linear-gradient(135deg, #00d9ff, #00ff88); color:#000; }
+        .secondary { background: rgba(255,255,255,0.1); color:white; }
+        .active-mult { background: #00ff88 !important; color: #000 !important; }
+        .grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; margin-top:10px; }
+        .mult-grid { grid-template-columns: repeat(4, 1fr); }
+        .icon-container { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
+        .icon { width: 16px; height: 16px; border-radius: 50%; margin-left: 5px; display: inline-block; }
+        .lock { background: #555; }
+        .mark { background: #00ff88; }
+    </style>
 </head>
-
 <body>
 
 <div class="container">
-
-<!-- ==========================================================
-     PANTALLA DE INICIO
-     Este bloque sustituye COMPLETAMENTE al actual <div id="inicio">
-     ========================================================== -->
-
-<div id="inicio" class="card">
-
-    <!-- ======================================================
-         TÍTULO
-         ====================================================== -->
-
-    <h2 class="card-title">
-        Configuración de la partida
-    </h2>
-
-    <p style="margin-bottom:25px;color:#aaa;">
-        Selecciona el modo de juego y añade entre 1 y 4 jugadores.
-    </p>
-
-
-    <!-- ======================================================
-         SELECCIÓN DE MODO
-         ====================================================== -->
-
-    <div class="modo-selector">
-
-        <button
-            id="btnCricket"
-            class="btn primary"
-            onclick="seleccionarModo('cricket')">
-
-            🏏 Cricket
-
-        </button>
-
-        <button
-            id="btn501"
-            class="btn secondary"
-            onclick="seleccionarModo('501')">
-
-            🎯 501
-
-        </button>
-
+    <div id="setup" class="card">
+        <input type="text" id="nombre" placeholder="Nombre jugador" style="width:100%; padding:12px; border-radius:8px; border:none; margin-bottom:8px; background: rgba(255,255,255,0.08); color:white;">
+        <button class="btn primary" onclick="iniciar('501')">Jugar 501</button>
+        <button class="btn secondary" onclick="iniciar('cricket')">Jugar Cricket</button>
     </div>
 
-
-    <!-- ======================================================
-         LISTA DE JUGADORES
-         ====================================================== -->
-
-    <div class="card" style="margin-top:25px;">
-
-        <h3 style="margin-bottom:15px;">
-            Jugadores
-        </h3>
-
-        <div id="jugadores">
-
-            <!--
-                Los jugadores serán añadidos dinámicamente
-                por addJugador()
-            -->
-
+    <div id="game" style="display:none;">
+        <div class="card">
+            <h2 id="titulo"></h2>
+            <p id="info-ronda"></p>
+            <button class="btn secondary" style="margin-top:10px; background: #ff4d4d;" onclick="volverAlMenu()">Salir al Menú</button>
         </div>
-
-        <button
-            class="btn secondary"
-            style="margin-top:15px;width:100%;"
-            onclick="addJugador()">
-
-            ➕ Añadir jugador
-
-        </button>
-
+        <div id="display" class="card"></div>
+        
+        <div class="grid mult-grid" id="mult-controls">
+            <button class="btn secondary" id="m1" onclick="setMult(1)">sencillo</button>
+            <button class="btn secondary" id="m2" onclick="setMult(2)">doble</button>
+            <button class="btn secondary" id="m3" onclick="setMult(3)">triple</button>
+            <button class="btn secondary" onclick="registrar(0)">Fallar</button>
+        </div>
+        
+        <div id="numeros" class="grid"></div>
     </div>
-
-
-    <!-- ======================================================
-         BOTÓN COMENZAR
-         ====================================================== -->
-
-    <button
-        class="btn primary"
-        style="
-            width:100%;
-            margin-top:25px;
-            font-size:20px;
-            padding:18px;
-        "
-        onclick="iniciar()">
-
-        ▶ COMENZAR PARTIDA
-
-    </button>
-
 </div>
-
-<!-- ==========================================================
-     FUNCIÓN PARA CAMBIAR EL MODO DE JUEGO
-     Sustituye por completo a:
-         onclick="modo='501'"
-         onclick="modo='cricket'"
-     ========================================================== -->
 
 <script>
+    let state = { nombre: '', modo: '', ronda: 1, dardo: 1, mult: 1, global501: 501, cricket: {20:0,19:0,18:0,17:0,16:0,15:0,25:0} };
 
-function seleccionarModo(nuevoModo){
-
-    modo = nuevoModo;
-
-    const cricket = document.getElementById("btnCricket");
-    const juego501 = document.getElementById("btn501");
-
-    cricket.className = "btn secondary";
-    juego501.className = "btn secondary";
-
-    if(nuevoModo==="cricket"){
-
-        cricket.className="btn primary";
-
-    }else{
-
-        juego501.className="btn primary";
-
+    function iniciar(modo) {
+        state.nombre = document.getElementById('nombre').value || "Jugador";
+        state.modo = modo;
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        render();
     }
 
-}
+    function volverAlMenu() {
+        state = { nombre: '', modo: '', ronda: 1, dardo: 1, mult: 1, global501: 501, cricket: {20:0,19:0,18:0,17:0,16:0,15:0,25:0} };
+        document.getElementById('setup').style.display = 'block';
+        document.getElementById('game').style.display = 'none';
+    }
 
+    function setMult(m) { state.mult = m; render(); }
+
+    function registrar(val) {
+        // En 25 y 50 forzamos multiplicador 1x en ambos juegos
+        let multiplier = (val === 25 || val === 50) ? 1 : state.mult;
+        
+        if (state.modo === '501') {
+            let score = (val === 50 ? 50 : val) * multiplier;
+            if (state.global501 - score >= 0) state.global501 -= score;
+        } else {
+            // Cricket: el 50 cuenta como 2 marcas en el Bull (25)
+            let marcasToAdd = (val === 50) ? 2 : multiplier;
+            if (state.cricket.hasOwnProperty(val === 50 ? 25 : val)) {
+                let target = (val === 50 ? 25 : val);
+                state.cricket[target] = Math.min(state.cricket[target] + marcasToAdd, 3);
+            }
+        }
+        
+        state.dardo++;
+        if (state.dardo > 3) { state.dardo = 1; state.ronda++; }
+        state.mult = 1; 
+        render();
+    }
+
+    function render() {
+        document.getElementById('titulo').innerText = `${state.modo.toUpperCase()} - ${state.nombre}`;
+        document.getElementById('info-ronda').innerText = `Ronda: ${state.ronda} | Dardo: ${state.dardo}`;
+        
+        document.querySelectorAll('.mult-grid .btn').forEach(btn => btn.classList.remove('active-mult'));
+        if(state.mult > 0) document.getElementById('m'+state.mult)?.classList.add('active-mult');
+        
+        let display = document.getElementById('display');
+        let nums = document.getElementById('numeros');
+
+        if (state.modo === '501') {
+            display.innerHTML = `<h2>Puntos: ${state.global501}</h2>`;
+            nums.innerHTML = [20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,25,50].map(n => 
+                `<button class="btn secondary" onclick="registrar(${n})">${n}</button>`).join('');
+        } else {
+            display.innerHTML = Object.keys(state.cricket).map(n => 
+                `<div class="icon-container"><span>${n==25?'Bull':n}</span> <div>` + 
+                Array(3).fill(0).map((_,i) => `<span class="icon ${i < state.cricket[n] ? 'mark' : 'lock'}"></span>`).join('') + 
+                `</div></div>`).join('');
+            nums.innerHTML = [20,19,18,17,16,15,25,50].map(n => 
+                `<button class="btn secondary" onclick="registrar(${n})">${n}</button>`).join('');
+        }
+    }
 </script>
-
-<div id="juego" style="display:none;">
-
-<div class="card">
-<h3 id="turno"></h3>
-<div id="score"></div>
-<p>Dardos: <span id="dardos">0</span>/3</p>
-<p id="estadoTurno"></p>
-</div>
-
-<div class="card selector">
-<button onclick="setMulti(1)" id="b1" class="btn primary">N</button>
-<button onclick="setMulti(2)" id="b2" class="btn secondary">D</button>
-<button onclick="setMulti(3)" id="b3" class="btn secondary">T</button>
-</div>
-
-<div class="card">
-<div id="botones" class="grid"></div>
-</div>
-
-</div>
-
-</div>
-
-<!-- IMPORTAR JS -->
-<script type="text/javascript" src="script.js"></script>
-
 </body>
 </html>
